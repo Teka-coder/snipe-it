@@ -32,6 +32,7 @@ class License extends Depreciable
     protected $guarded = 'id';
     protected $table = 'licenses';
 
+
     protected $casts = [
         'purchase_date' => 'date',
         'expiration_date' => 'date',
@@ -106,10 +107,10 @@ class License extends Depreciable
      * @var array
      */
     protected $searchableRelations = [
-      'manufacturer' => ['name'],
-      'company'      => ['name'],
-      'category'     => ['name'],
-      'depreciation' => ['name'],
+        'manufacturer' => ['name'],
+        'company'      => ['name'],
+        'category'     => ['name'],
+        'depreciation' => ['name'],
     ];
 
     /**
@@ -323,7 +324,10 @@ class License extends Depreciable
      */
     public function checkin_email()
     {
-        return $this->category->checkin_email;
+        if ($this->category) {
+            return $this->category->checkin_email;
+        }
+        return false;
     }
 
     /**
@@ -335,7 +339,11 @@ class License extends Depreciable
      */
     public function requireAcceptance()
     {
-        return $this->category->require_acceptance;
+        if ($this->category) {
+            return $this->category->require_acceptance;
+        }
+
+        return false;
     }
 
     /**
@@ -348,14 +356,16 @@ class License extends Depreciable
      */
     public function getEula()
     {
-
-        if ($this->category->eula_text) {
-            return Helper::parseEscapedMarkedown($this->category->eula_text);
-        } elseif ($this->category->use_default_eula == '1') {
-            return Helper::parseEscapedMarkedown(Setting::getSettings()->default_eula_text);
-        } else {
-            return false;
+        if ($this->category){
+            if ($this->category->eula_text) {
+                return Helper::parseEscapedMarkedown($this->category->eula_text);
+            } elseif ($this->category->use_default_eula == '1') {
+                return Helper::parseEscapedMarkedown(Setting::getSettings()->default_eula_text);
+            } 
         }
+
+        return false;
+        
     }
 
     /**
@@ -425,7 +435,7 @@ class License extends Depreciable
     public static function assetcount()
     {
         return LicenseSeat::whereNull('deleted_at')
-                   ->count();
+            ->count();
     }
 
 
@@ -441,8 +451,8 @@ class License extends Depreciable
     public function totalSeatsByLicenseID()
     {
         return LicenseSeat::where('license_id', '=', $this->id)
-                   ->whereNull('deleted_at')
-                   ->count();
+            ->whereNull('deleted_at')
+            ->count();
     }
 
     /**
@@ -486,10 +496,11 @@ class License extends Depreciable
     public static function availassetcount()
     {
         return LicenseSeat::whereNull('assigned_to')
-                   ->whereNull('asset_id')
-                   ->whereNull('deleted_at')
-                   ->count();
+            ->whereNull('asset_id')
+            ->whereNull('deleted_at')
+            ->count();
     }
+
 
     /**
      * Returns the number of total available seats for this license
@@ -533,7 +544,7 @@ class License extends Depreciable
     {
         return $this->licenseSeatsRelation()->where(function ($query) {
             $query->whereNotNull('assigned_to')
-            ->orWhereNotNull('asset_id');
+                ->orWhereNotNull('asset_id');
         });
     }
 
@@ -621,13 +632,13 @@ class License extends Depreciable
     public function freeSeat()
     {
         return  $this->licenseseats()
-                    ->whereNull('deleted_at')
-                    ->where(function ($query) {
-                        $query->whereNull('assigned_to')
-                            ->whereNull('asset_id');
-                    })
-                    ->orderBy('id', 'asc')
-                    ->first();
+            ->whereNull('deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('assigned_to')
+                    ->whereNull('asset_id');
+            })
+            ->orderBy('id', 'asc')
+            ->first();
     }
 
 
@@ -657,11 +668,11 @@ class License extends Depreciable
         $days = (is_null($days)) ? 60 : $days;
 
         return self::whereNotNull('expiration_date')
-        ->whereNull('deleted_at')
-        ->whereRaw(DB::raw('DATE_SUB(`expiration_date`,INTERVAL '.$days.' DAY) <= DATE(NOW()) '))
-        ->where('expiration_date', '>', date('Y-m-d'))
-        ->orderBy('expiration_date', 'ASC')
-        ->get();
+            ->whereNull('deleted_at')
+            ->whereRaw(DB::raw('DATE_SUB(`expiration_date`,INTERVAL '.$days.' DAY) <= DATE(NOW()) '))
+            ->where('expiration_date', '>', date('Y-m-d'))
+            ->orderBy('expiration_date', 'ASC')
+            ->get();
     }
 
     /**

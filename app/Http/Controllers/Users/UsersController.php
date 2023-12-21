@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\UserNotFoundException;
 use App\Http\Requests\ImageUploadRequest;
 use App\Http\Requests\SaveUserRequest;
+use App\Models\Actionlog;
 use App\Models\Asset;
 use App\Models\Company;
 use App\Models\Group;
-use App\Models\Ldap;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
@@ -120,7 +120,7 @@ class UsersController extends Controller
         $user->created_by = Auth::user()->id;
         $user->start_date = $request->input('start_date', null);
         $user->end_date = $request->input('end_date', null);
-        $user->autoassign_licenses= $request->input('autoassign_licenses', 1);
+        $user->autoassign_licenses = $request->input('autoassign_licenses', 0);
 
         // Strip out the superuser permission if the user isn't a superadmin
         $permissions_array = $request->input('permission');
@@ -210,7 +210,6 @@ class UsersController extends Controller
      */
     public function update(SaveUserRequest $request, $id = null)
     {
-
         // We need to reverse the UI specific logic for our
         // permissions here before we update the user.
         $permissions = $request->input('permissions', []);
@@ -268,14 +267,15 @@ class UsersController extends Controller
         $user->city = $request->input('city', null);
         $user->state = $request->input('state', null);
         $user->country = $request->input('country', null);
-        $user->activated = $request->input('activated', 0);
+        // if a user is editing themselves we should always keep activated true
+        $user->activated = $request->input('activated', $request->user()->is($user) ? 1 : 0);
         $user->zip = $request->input('zip', null);
         $user->remote = $request->input('remote', 0);
         $user->vip = $request->input('vip', 0);
         $user->website = $request->input('website', null);
         $user->start_date = $request->input('start_date', null);
         $user->end_date = $request->input('end_date', null);
-        $user->autoassign_licenses = $request->input('autoassign_licenses', 1);
+        $user->autoassign_licenses = $request->input('autoassign_licenses', 0);
 
         // Update the location of any assets checked out to this user
         Asset::where('assigned_type', User::class)
@@ -385,18 +385,35 @@ class UsersController extends Controller
      */
     public function getRestore($id = null)
     {
-        $this->authorize('update', User::class);
-        // Get user information
-        if (! User::onlyTrashed()->find($id)) {
-            return redirect()->route('users.index')->with('error', trans('admin/users/messages.user_not_found'));
+        if ($user = User::withTrashed()->find($id)) {
+            $this->authorize('delete', $user);
+
+            if ($user->deleted_at == '') {
+                return redirect()->back()->with('error', trans('general.not_deleted', ['item_type' => trans('general.user')]));
+            }
+
+            if ($user->restore()) {
+                $logaction = new Actionlog();
+                $logaction->item_type = User::class;
+                $logaction->item_id = $user->id;
+                $logaction->created_at = date('Y-m-d H:i:s');
+                $logaction->user_id = Auth::user()->id;
+                $logaction->logaction('restore');
+
+                // Redirect them to the deleted page if there are more, otherwise the section index
+                $deleted_users = User::onlyTrashed()->count();
+                if ($deleted_users > 0) {
+                    return redirect()->back()->with('success', trans('admin/users/message.success.restored'));
+                }
+                return redirect()->route('users.index')->with('success', trans('admin/users/message.success.restored'));
+
+            }
+
+            // Check validation to make sure we're not restoring a user with the same username as an existing user
+            return redirect()->back()->with('error', trans('general.could_not_restore', ['item_type' => trans('general.user'), 'error' => $user->getErrors()->first()]));
         }
 
-        // Restore the user
-        if (User::withTrashed()->where('id', $id)->restore()) {
-            return redirect()->route('users.index')->with('success', trans('admin/users/message.success.restored'));
-        }
-
-        return redirect()->route('users.index')->with('error', 'User could not be restored.');
+        return redirect()->route('users.index')->with('error', trans('admin/users/message.does_not_exist'));
     }
 
     /**

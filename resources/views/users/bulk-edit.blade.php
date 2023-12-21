@@ -39,6 +39,16 @@
                         @include ('partials.forms.edit.department-select', ['translated_name' => trans('general.department'), 'fieldname' => 'department_id'])
 
 
+                        <div class="form-group">
+                            <div class=" col-md-9 col-md-offset-3">
+                                <label class="form-control">
+                                    {{ Form::checkbox('null_department_id', '1', false) }}
+                                    {{ trans_choice('general.set_users_field_to_null', count($users), ['field' => trans('general.department'), 'user_count' => count($users)]) }}
+                                </label>
+                            </div>
+                        </div>
+
+
                         <!-- Location -->
                         @include ('partials.forms.edit.location-select', ['translated_name' => trans('general.location'), 'fieldname' => 'location_id'])
 
@@ -55,10 +65,30 @@
                         <!-- Company -->
                         @if (\App\Models\Company::canManageUsersCompanies())
                             @include ('partials.forms.edit.company-select', ['translated_name' => trans('general.select_company'), 'fieldname' => 'company_id'])
+
+                            <div class="form-group">
+                                <div class=" col-md-9 col-md-offset-3">
+                                    <label class="form-control">
+                                        {{ Form::checkbox('null_company_id', '1', false) }}
+                                        {{ trans_choice('general.set_users_field_to_null', count($users), ['field' => trans('general.company'), 'user_count' => count($users)]) }}
+                                    </label>
+                                </div>
+                            </div>
+
                         @endif
 
                         <!-- Manager -->
                     @include ('partials.forms.edit.user-select', ['translated_name' => trans('admin/users/table.manager'), 'fieldname' => 'manager_id'])
+
+                        <div class="form-group">
+                            <div class=" col-md-9 col-md-offset-3">
+                                <label class="form-control">
+                                    {{ Form::checkbox('null_manager_id', '1', false) }}
+                                    {{ trans_choice('general.set_users_field_to_null', count($users), ['field' => trans('admin/users/table.manager'), 'user_count' => count($users)]) }}
+                                </label>
+                            </div>
+                        </div>
+
 
                         <!-- language -->
                         <div class="form-group {{ $errors->has('locale') ? 'has-error' : '' }}">
@@ -116,6 +146,29 @@
                                         {{ Form::radio('ldap_import', '0', old('ldap_import'), ['id' => 'ldap_import', 'aria-label'=>'ldap_import']) }}
                                         {{ trans('general.ldap_import') }}
                                     </label>
+                            </div>
+                        </div> <!--/form-group-->
+
+                        <!-- activated -->
+                        <div class="form-group">
+                            <div class="col-sm-3 control-label">
+                                {{ trans('general.autoassign_licenses') }}
+                            </div>
+                            <div class="col-sm-9">
+
+                                <label for="no_change_autoassign_licenses" class="form-control">
+                                    {{ Form::radio('autoassign_licenses', '', true, ['id' => 'no_change_autoassign_licenses', 'aria-label'=>'no_change_autoassign_licenses']) }}
+                                    {{  trans('general.do_not_change') }}
+                                </label>
+                                <label for="autoassign_licenses" class="form-control">
+                                    {{ Form::radio('autoassign_licenses', '1', old('autoassign_licenses'), ['id' => 'autoassign_licenses', 'aria-label'=>'autoassign_licenses']) }}
+                                    {{  trans('general.autoassign_licenses_help')}}
+                                </label>
+                                <label for="dont_autoassign_licenses" class="form-control">
+                                    {{ Form::radio('autoassign_licenses', '0', old('autoassign_licenses'), ['id' => 'dont_autoassign_licenses', 'aria-label'=>'dont_autoassign_licenses']) }}
+                                    {{  trans('general.no_autoassign_licenses_help')}}
+                                </label>
+
                             </div>
                         </div> <!--/form-group-->
 

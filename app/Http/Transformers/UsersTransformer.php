@@ -24,7 +24,7 @@ class UsersTransformer
         $array = [
                 'id' => (int) $user->id,
                 'avatar' => e($user->present()->gravatar),
-                'name' => e($user->first_name).' '.e($user->last_name),
+                'name' => e($user->getFullNameAttribute()),
                 'first_name' => e($user->first_name),
                 'last_name' => e($user->last_name),
                 'username' => e($user->username),
@@ -53,9 +53,10 @@ class UsersTransformer
                     'id' => (int) $user->userloc->id,
                     'name'=> e($user->userloc->name),
                 ] : null,
-                'notes'=> e($user->notes),
+                'notes'=> Helper::parseEscapedMarkedownInline($user->notes),
                 'permissions' => $user->decodePermissions(),
                 'activated' => ($user->activated == '1') ? true : false,
+                'autoassign_licenses' => ($user->autoassign_licenses == '1') ? true : false,
                 'ldap_import' => ($user->ldap_import == '1') ? true : false,
                 'two_factor_enrolled' => ($user->two_factor_active_and_enrolled()) ? true : false,
                 'two_factor_optin' => ($user->two_factor_active()) ? true : false,
@@ -78,7 +79,7 @@ class UsersTransformer
 
         $permissions_array['available_actions'] = [
             'update' => (Gate::allows('update', User::class) && ($user->deleted_at == '')),
-            'delete' => (Gate::allows('delete', User::class) && ($user->assets_count == 0) && ($user->licenses_count == 0) && ($user->accessories_count == 0)),
+            'delete' => $user->isDeletable(),
             'clone' => (Gate::allows('create', User::class) && ($user->deleted_at == '')),
             'restore' => (Gate::allows('create', User::class) && ($user->deleted_at != '')),
         ];
